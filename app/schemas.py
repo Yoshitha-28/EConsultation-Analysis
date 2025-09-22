@@ -25,7 +25,6 @@ class CommentAnalysis(CommentAnalysisBase):
 class CommentBase(BaseModel):
     draft_id: str
     text: str
-    user_id: Optional[str] = None
 
 class CommentCreate(CommentBase):
     pass

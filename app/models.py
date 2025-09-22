@@ -9,7 +9,6 @@ class Comment(Base):
     id = Column(Integer, primary_key=True, index=True)
     draft_id = Column(String, index=True)
     text = Column(String)
-    user_id = Column(String, nullable=True)
     status = Column(String, default="received")
     submitted_at = Column(DateTime, default=datetime.datetime.utcnow)
     

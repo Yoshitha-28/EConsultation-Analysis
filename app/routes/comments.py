@@ -68,7 +68,6 @@ async def get_analysis_result(comment_id: int, db: AsyncSession = Depends(get_db
         return {
             "draft_id": comment.draft_id,
             "text": comment.text,
-            "user_id": comment.user_id,
             "id": comment.id,
             "status": comment.status,
             "submitted_at": comment.submitted_at.isoformat(),
