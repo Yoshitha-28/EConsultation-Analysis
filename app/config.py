@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     S3_ACCESS_KEY: str
     S3_SECRET_KEY: str
     S3_BUCKET: str
+    MINIO_ROOT_USER: str
+    MINIO_ROOT_PASSWORD: str
 
     # Model Versioning
     MODEL_VERSION: str = "hf-distilbert-v1"

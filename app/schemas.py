@@ -2,7 +2,6 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 
-# --- Analysis Schemas ---
 class CommentAnalysisBase(BaseModel):
     sentiment_label: str
     sentiment_score: float
@@ -20,7 +19,6 @@ class CommentAnalysis(CommentAnalysisBase):
     analyzed_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
-# --- Comment Schemas ---
 class CommentBase(BaseModel):
     draft_id: str
     text: str
@@ -36,7 +34,6 @@ class Comment(CommentBase):
     analysis: Optional[CommentAnalysis] = None
     model_config = ConfigDict(from_attributes=True)
 
-# --- Bulk Input Schemas ---
 class BulkCommentsIn(BaseModel):
     draft_id: str
     comments: List[str]

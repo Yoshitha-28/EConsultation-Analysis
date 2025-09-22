@@ -2,16 +2,11 @@ from fastapi import FastAPI
 from .database import Base, async_engine
 from .routes import comments
 
-# Create database tables on startup
 async def create_tables():
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-app = FastAPI(
-    title="eConsultation Analysis API (PostgreSQL)",
-    description="An AI model to predict sentiments and analyze suggestions from stakeholders.",
-    version="1.0.0"
-)
+app = FastAPI(title="eConsultation Analysis API (PostgreSQL)")
 
 @app.on_event("startup")
 async def on_startup():
