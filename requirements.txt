@@ -24,3 +24,6 @@ langdetect
 # Settings Management
 pydantic-settings
 python-dotenv
+
+# Cloud/Object Storage
+boto3

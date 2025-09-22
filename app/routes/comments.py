@@ -24,6 +24,7 @@ async def create_bulk_comments(payload: schemas.BulkCommentsIn, db: AsyncSession
     
     task_ids = []
     for comment in created_comments:
+        # This line sends the task by name to the worker
         task = celery_app.send_task("app.workers.tasks.analyze_comment_async", args=[comment.id])
         task_ids.append(task.id)
         
