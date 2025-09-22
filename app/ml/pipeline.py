@@ -17,5 +17,5 @@ def analyze_text_pipeline(draft_id: str, text: str) -> dict:
         "summary": summary,
         "keywords": keywords,
         "wordcloud_path": wordcloud_path,
-        "model_version": settings.model_version
+        "model_version": settings.MODEL_VERSION
     }
