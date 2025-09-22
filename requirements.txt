@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+sqlalchemy
+alembic
+psycopg2-binary
+python-jose[cryptography]
+passlib[bcrypt]
+pydantic
+transformers
+torch
+scikit-learn
+keybert
+wordcloud
+matplotlib
