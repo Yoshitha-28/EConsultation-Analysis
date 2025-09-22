@@ -1,58 +1,31 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List
-from datetime import datetime
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, ARRAY
+from sqlalchemy.orm import relationship
+from .database import Base
+import datetime
 
-class PyObjectId(str):
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
+class Comment(Base):
+    __tablename__ = "comments"
 
-    @classmethod
-    def validate(cls, v):
-        if not isinstance(v, (str, __import__("bson").ObjectId)):
-            raise TypeError('ObjectId required')
-        return str(v)
+    id = Column(Integer, primary_key=True, index=True)
+    draft_id = Column(String, index=True)
+    text = Column(String)
+    user_id = Column(String, nullable=True)
+    status = Column(String, default="received")
+    submitted_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    analysis = relationship("CommentAnalysis", back_populates="comment", uselist=False, cascade="all, delete-orphan")
 
-class Sentiment(BaseModel):
-    label: str
-    score: float
+class CommentAnalysis(Base):
+    __tablename__ = "comment_analyses"
 
-class CommentAnalysis(BaseModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
-    comment_id: PyObjectId
-    draft_id: str
-    sentiment: Sentiment
-    summary: str
-    keywords: List[str]
-    wordcloud_path: Optional[str] = None
-    model_version: str
-    analyzed_at: datetime = Field(default_factory=datetime.utcnow)
-
-    class Config:
-        json_encoders = {__import__("bson").ObjectId: str}
-        allow_population_by_field_name = True
-
-class Comment(BaseModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
-    draft_id: str
-    text: str
-    user_id: Optional[str] = None
-    status: str = "received"
-    submitted_at: datetime = Field(default_factory=datetime.utcnow)
-
-    class Config:
-        json_encoders = {__import__("bson").ObjectId: str}
-        allow_population_by_field_name = True
-
-class CommentOut(Comment):
-    analysis: Optional[CommentAnalysis] = None
-
-class BulkCommentsIn(BaseModel):
-    draft_id: str = Field(..., example="New_IT_Rules_2025")
-    comments: List[str] = Field(..., min_items=1, example=["Comment 1.", "Comment 2."])
-
-class BulkCommentsResponse(BaseModel):
-    message: str
-    draft_id: str
-    comments_received: int
-    task_ids: List[str]
+    id = Column(Integer, primary_key=True, index=True)
+    sentiment_label = Column(String)
+    sentiment_score = Column(Float)
+    summary = Column(String)
+    keywords = Column(ARRAY(String))
+    wordcloud_path = Column(String, nullable=True)
+    model_version = Column(String)
+    analyzed_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    comment_id = Column(Integer, ForeignKey("comments.id"))
+    comment = relationship("Comment", back_populates="analysis")

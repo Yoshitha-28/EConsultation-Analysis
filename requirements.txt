@@ -3,11 +3,10 @@ fastapi
 uvicorn[standard]
 python-multipart
 
-# Database
-motor
-pymongo
-pydantic[email]
-pydantic-settings
+# Database (PostgreSQL)
+sqlalchemy
+asyncpg # Async driver for SQLAlchemy
+psycopg2-binary # Standard sync driver
 
 # Background Tasks
 celery[redis]
@@ -22,8 +21,6 @@ wordcloud
 Pillow
 langdetect
 
-# Cloud/Object Storage
-boto3
-
-# Utilities
+# Settings Management
+pydantic-settings
 python-dotenv

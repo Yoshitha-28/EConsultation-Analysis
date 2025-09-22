@@ -1,69 +1,42 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from typing import List
-from bson import ObjectId
-from datetime import datetime
-from ..db import db_async
-from ..models import Comment, CommentOut, BulkCommentsIn, BulkCommentsResponse
-from ..workers.tasks import analyze_comment_async
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .. import crud, schemas
+from ..database import AsyncSessionLocal
+from ..celery_app import celery_app
 
 router = APIRouter()
 
-@router.post("/comments/bulk", response_model=BulkCommentsResponse, status_code=status.HTTP_202_ACCEPTED)
-async def create_bulk_comments(payload: BulkCommentsIn):
-    """
-    Accept a list of comments for a single draft, save them,
-    and trigger analysis tasks for each one.
-    """
-    task_ids = []
-    comments_to_insert = []
+# Dependency to get DB session
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        yield session
 
-    # Loop through the comment texts and create a full document for each one
-    for comment_text in payload.comments:
-        # Manually create the document dictionary and assign a NEW ObjectId
-        comment_doc = {
-            "_id": ObjectId(), # <--- THIS IS THE FIX: Generate a new unique ID
-            "draft_id": payload.draft_id,
-            "text": comment_text,
-            "user_id": None, # Assuming no user_id for bulk
-            "status": "received",
-            "submitted_at": datetime.utcnow()
-        }
-        comments_to_insert.append(comment_doc)
-
-    if not comments_to_insert:
+@router.post("/comments/bulk", response_model=schemas.BulkCommentsResponse)
+async def create_bulk_comments(payload: schemas.BulkCommentsIn, db: AsyncSession = Depends(get_db)):
+    comments_to_create = [schemas.CommentCreate(draft_id=payload.draft_id, text=t) for t in payload.comments]
+    
+    if not comments_to_create:
         raise HTTPException(status_code=400, detail="Comments list cannot be empty.")
-
-    # Insert all comments in a single database operation
-    result = await db_async.comments.insert_many(comments_to_insert)
-    inserted_ids = result.inserted_ids
-
-    # Trigger a Celery task for each newly inserted comment
-    for comment_id in inserted_ids:
-        task = analyze_comment_async.delay(str(comment_id))
+    
+    created_comments = await crud.create_comments(db, comments_to_create)
+    
+    task_ids = []
+    for comment in created_comments:
+        task = celery_app.send_task("app.workers.tasks.analyze_comment_async", args=[comment.id])
         task_ids.append(task.id)
-
+        
     return {
-        "message": f"Successfully received and queued {len(inserted_ids)} comments for analysis.",
+        "message": f"Successfully received and queued {len(created_comments)} comments for analysis.",
         "draft_id": payload.draft_id,
-        "comments_received": len(inserted_ids),
+        "comments_received": len(created_comments),
         "task_ids": task_ids,
     }
 
-@router.get("/comments/{comment_id}", response_model=CommentOut)
-async def get_comment(comment_id: str):
-    if not ObjectId.is_valid(comment_id):
-        raise HTTPException(status_code=400, detail="Invalid ObjectId format")
-        
-    comment_oid = ObjectId(comment_id)
-    comment = await db_async.comments.find_one({"_id": comment_oid})
-    
-    if comment is None:
+@router.get("/comments/{comment_id}", response_model=schemas.Comment)
+async def read_comment(comment_id: int, db: AsyncSession = Depends(get_db)):
+    db_comment = await crud.get_comment(db, comment_id=comment_id)
+    if db_comment is None:
         raise HTTPException(status_code=404, detail="Comment not found")
-
-    analysis = await db_async.comment_analysis.find_one({"comment_id": comment_oid})
-    
-    response = CommentOut(**comment)
-    if analysis:
-        response.analysis = analysis
-        
-    return response
+    return db_comment

@@ -1,11 +1,15 @@
 services:
-  mongo:
-    image: mongo:6
-    container_name: mongo
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - mongo-data:/data/db
+      - postgres-data:/var/lib/postgresql/data
     ports:
-      - "27017:27017"
+      - "5432:5432"
     networks:
       - econsult-net
 
@@ -41,11 +45,15 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - mongo
+      - postgres
       - redis
       - minio
     environment:
-      - MONGODB_URI=mongodb://mongo:27017
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
       - CELERY_BROKER_URL=redis://redis:6379/0
       - S3_ENDPOINT=http://minio:9000
     networks:
@@ -58,11 +66,15 @@ services:
     volumes:
       - .:/app
     depends_on:
+      - postgres
       - redis
-      - mongo
       - minio
     environment:
-      - MONGODB_URI=mongodb://mongo:27017
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
       - S3_ENDPOINT=http://minio:9000
@@ -70,7 +82,7 @@ services:
       - econsult-net
 
 volumes:
-  mongo-data:
+  postgres-data:
   minio-data:
 
 networks:
