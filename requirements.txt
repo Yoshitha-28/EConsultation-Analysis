@@ -1,14 +1,29 @@
+# API Framework
 fastapi
-uvicorn
-sqlalchemy
-alembic
-psycopg2-binary
-python-jose[cryptography]
-passlib[bcrypt]
-pydantic
+uvicorn[standard]
+python-multipart
+
+# Database
+motor
+pymongo
+pydantic[email]
+pydantic-settings
+
+# Background Tasks
+celery[redis]
+redis
+
+# ML & NLP
 transformers
 torch
-scikit-learn
-keybert
+spacy
+yake
 wordcloud
-matplotlib
+Pillow
+langdetect
+
+# Cloud/Object Storage
+boto3
+
+# Utilities
+python-dotenv

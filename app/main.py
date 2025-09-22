@@ -1,15 +1,14 @@
 from fastapi import FastAPI
-from app.database import Base, engine
+from .routes import comments
 
-from app.routes import users, drafts, comments, analysis
+app = FastAPI(
+    title="eConsultation Analysis API",
+    description="An AI model to predict sentiments and analyze suggestions from stakeholders.",
+    version="1.0.0"
+)
 
-# Create DB tables
-Base.metadata.create_all(bind=engine)
+app.include_router(comments.router, prefix="/api/v1", tags=["Comments"])
 
-app = FastAPI(title="SIH eConsultation Backend")
-
-# Register routes
-app.include_router(users.router, prefix="/users", tags=["Users"])
-app.include_router(drafts.router, prefix="/drafts", tags=["Drafts"])
-app.include_router(comments.router, prefix="/comments", tags=["Comments"])
-app.include_router(analysis.router, prefix="/analysis", tags=["Analysis"])
+@app.get("/", tags=["Root"])
+async def read_root():
+    return {"message": "Welcome to the eConsultation Analysis API"}

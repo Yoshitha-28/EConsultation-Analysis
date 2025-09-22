@@ -1,0 +1,78 @@
+services:
+  mongo:
+    image: mongo:6
+    container_name: mongo
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - econsult-net
+
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - econsult-net
+
+  minio:
+    image: minio/minio
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - econsult-net
+
+  api:
+    build: .
+    container_name: api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongo
+      - redis
+      - minio
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - S3_ENDPOINT=http://minio:9000
+    networks:
+      - econsult-net
+
+  worker:
+    build: .
+    container_name: worker
+    command: celery -A app.celery_app worker --loglevel=info -Q analysis
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - mongo
+      - minio
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - S3_ENDPOINT=http://minio:9000
+    networks:
+      - econsult-net
+
+volumes:
+  mongo-data:
+  minio-data:
+
+networks:
+  econsult-net:
+    driver: bridge

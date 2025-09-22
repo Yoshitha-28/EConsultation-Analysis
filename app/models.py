@@ -1,65 +1,58 @@
-import uuid
-from sqlalchemy import Column, String, Text, ForeignKey, DateTime, Enum, JSON
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from pydantic import BaseModel, Field
+from typing import Optional, List
 from datetime import datetime
-import enum
 
-from app.database import Base
+class PyObjectId(str):
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
 
-class UserRole(enum.Enum):
-    stakeholder = "stakeholder"
-    admin = "admin"
+    @classmethod
+    def validate(cls, v):
+        if not isinstance(v, (str, __import__("bson").ObjectId)):
+            raise TypeError('ObjectId required')
+        return str(v)
 
-class SentimentType(enum.Enum):
-    positive = "positive"
-    neutral = "neutral"
-    negative = "negative"
+class Sentiment(BaseModel):
+    label: str
+    score: float
 
-class User(Base):
-    __tablename__ = "users"
+class CommentAnalysis(BaseModel):
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    comment_id: PyObjectId
+    draft_id: str
+    sentiment: Sentiment
+    summary: str
+    keywords: List[str]
+    wordcloud_path: Optional[str] = None
+    model_version: str
+    analyzed_at: datetime = Field(default_factory=datetime.utcnow)
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, nullable=False)
-    email = Column(String, unique=True, nullable=False)
-    password_hash = Column(Text, nullable=False)
-    role = Column(Enum(UserRole), default=UserRole.stakeholder)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    class Config:
+        json_encoders = {__import__("bson").ObjectId: str}
+        allow_population_by_field_name = True
 
-    comments = relationship("Comment", back_populates="user")
+class Comment(BaseModel):
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    draft_id: str
+    text: str
+    user_id: Optional[str] = None
+    status: str = "received"
+    submitted_at: datetime = Field(default_factory=datetime.utcnow)
 
-class Draft(Base):
-    __tablename__ = "drafts"
+    class Config:
+        json_encoders = {__import__("bson").ObjectId: str}
+        allow_population_by_field_name = True
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    title = Column(String, nullable=False)
-    description = Column(Text, nullable=False)
-    open_date = Column(DateTime, nullable=False)
-    close_date = Column(DateTime, nullable=False)
+class CommentOut(Comment):
+    analysis: Optional[CommentAnalysis] = None
 
-    comments = relationship("Comment", back_populates="draft")
+class BulkCommentsIn(BaseModel):
+    draft_id: str = Field(..., example="New_IT_Rules_2025")
+    comments: List[str] = Field(..., min_items=1, example=["Comment 1.", "Comment 2."])
 
-class Comment(Base):
-    __tablename__ = "comments"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    draft_id = Column(UUID(as_uuid=True), ForeignKey("drafts.id"), nullable=False)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    text = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    draft = relationship("Draft", back_populates="comments")
-    user = relationship("User", back_populates="comments")
-    analysis = relationship("Analysis", uselist=False, back_populates="comment")
-
-class Analysis(Base):
-    __tablename__ = "analysis"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    comment_id = Column(UUID(as_uuid=True), ForeignKey("comments.id"), nullable=False)
-    sentiment = Column(Enum(SentimentType))
-    summary = Column(Text)
-    keywords = Column(JSON)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    comment = relationship("Comment", back_populates="analysis")
+class BulkCommentsResponse(BaseModel):
+    message: str
+    draft_id: str
+    comments_received: int
+    task_ids: List[str]
