@@ -1,6 +1,6 @@
 # app/schemas.py
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 class CommentAnalysisBase(BaseModel):
@@ -42,8 +42,27 @@ class BulkCommentsIn(BaseModel):
     draft_id: str
     comments: List[str]
 
+# NEW: Schema for individual analysis result
+class CommentAnalysisResult(BaseModel):
+    comment_id: int
+    draft_id: str
+    status: str
+    analysis: Dict[str, Any]
+
+# UPDATED: Now returns analysis results instead of task IDs
 class BulkCommentsResponse(BaseModel):
     message: str
     draft_id: str
     comments_received: int
-    task_ids: List[str]
+    analysis_results: List[CommentAnalysisResult]  # Changed from task_ids to analysis_results
+
+# NEW: Schema for direct text analysis (optional)
+class DirectAnalysisRequest(BaseModel):
+    text: str
+    draft_id: Optional[str] = None
+
+class DirectAnalysisResponse(BaseModel):
+    draft_id: Optional[str]
+    text: str
+    status: str
+    analysis: Dict[str, Any]

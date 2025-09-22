@@ -1,12 +1,12 @@
 # app/routes/comments.py
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
 from .. import models, schemas
-from ..crud import create_comments, get_comment  # ← Change to create_comments (plural)
-from app.workers.tasks import analyze_comment_async
+from ..crud import create_comments, get_comment
+from ..services.analysis_service import analyze_comment_sync  # New synchronous service
 
 router = APIRouter()
 
@@ -15,7 +15,7 @@ async def create_bulk_comments(
     payload: schemas.BulkCommentsIn, 
     db: AsyncSession = Depends(get_db)
 ):
-    """Create multiple comments and start analysis"""
+    """Create multiple comments and perform analysis synchronously"""
     try:
         # Create comments using your existing crud function
         comments_to_create = [
@@ -23,23 +23,25 @@ async def create_bulk_comments(
             for text in payload.comments
         ]
         
-        # FIX: Use create_comments (plural) instead of create_comment (singular)
-        created_comments = await create_comments(db, comments_to_create)  # ← This is correct now
+        # Create comments in database
+        created_comments = await create_comments(db, comments_to_create)
         
-        task_ids = []
+        # Perform analysis synchronously for each comment
+        analysis_results = []
         for comment in created_comments:
-            task = analyze_comment_async.delay(comment.id)
-            task_ids.append(task.id)
+            # Analyze comment immediately and wait for results
+            analysis_result = await analyze_comment_sync(db, comment.id, comment.text)
+            analysis_results.append(analysis_result)
         
         return {
-            "message": f"Successfully received and queued {len(created_comments)} comments for analysis.",
+            "message": f"Successfully analyzed {len(created_comments)} comments.",
             "draft_id": payload.draft_id,
             "comments_received": len(created_comments),
-            "task_ids": task_ids,
+            "analysis_results": analysis_results,  # Now returning actual results, not task IDs
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create comments: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to analyze comments: {str(e)}")
 
 @router.get("/comments/{comment_id}", response_model=schemas.Comment)
 async def read_comment(comment_id: int, db: AsyncSession = Depends(get_db)):
@@ -48,7 +50,6 @@ async def read_comment(comment_id: int, db: AsyncSession = Depends(get_db)):
     if db_comment is None:
         raise HTTPException(status_code=404, detail="Comment not found")
     
-    # Convert to response model - the relationship is called "analysis" not "analysis_result"
     return db_comment
 
 @router.get("/comments/{comment_id}/analysis")
@@ -59,8 +60,7 @@ async def get_analysis_result(comment_id: int, db: AsyncSession = Depends(get_db
         if not comment:
             raise HTTPException(status_code=404, detail="Comment not found")
         
-        # The relationship is called "analysis" (singular) based on your model
-        analysis_result = comment.analysis  # NOT analysis_result
+        analysis_result = comment.analysis
         
         if not analysis_result:
             raise HTTPException(status_code=404, detail="Analysis not yet completed")
