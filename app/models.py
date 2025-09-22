@@ -1,3 +1,4 @@
+# app/models.py
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, ARRAY
 from sqlalchemy.orm import relationship
 from .database import Base
@@ -11,7 +12,11 @@ class Comment(Base):
     user_id = Column(String, nullable=True)
     status = Column(String, default="received")
     submitted_at = Column(DateTime, default=datetime.datetime.utcnow)
-    analysis = relationship("CommentAnalysis", back_populates="comment", uselist=False, cascade="all, delete-orphan")
+    
+    # Ensure lazy loading is properly configured
+    analysis = relationship("CommentAnalysis", back_populates="comment", 
+                          uselist=False, cascade="all, delete-orphan", 
+                          lazy="selectin")  # ← Change lazy loading strategy
 
 class CommentAnalysis(Base):
     __tablename__ = "comment_analyses"
@@ -24,4 +29,5 @@ class CommentAnalysis(Base):
     model_version = Column(String)
     analyzed_at = Column(DateTime, default=datetime.datetime.utcnow)
     comment_id = Column(Integer, ForeignKey("comments.id"))
+    
     comment = relationship("Comment", back_populates="analysis")

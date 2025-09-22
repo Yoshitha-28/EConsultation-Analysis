@@ -1,5 +1,6 @@
-from pydantic import BaseModel, ConfigDict
-from typing import Optional, List
+# app/schemas.py
+from pydantic import BaseModel
+from typing import List, Optional
 from datetime import datetime
 
 class CommentAnalysisBase(BaseModel):
@@ -9,6 +10,7 @@ class CommentAnalysisBase(BaseModel):
     keywords: List[str]
     wordcloud_path: Optional[str] = None
     model_version: str
+    analyzed_at: datetime
 
 class CommentAnalysisCreate(CommentAnalysisBase):
     pass
@@ -16,8 +18,9 @@ class CommentAnalysisCreate(CommentAnalysisBase):
 class CommentAnalysis(CommentAnalysisBase):
     id: int
     comment_id: int
-    analyzed_at: datetime
-    model_config = ConfigDict(from_attributes=True)
+    
+    class Config:
+        from_attributes = True
 
 class CommentBase(BaseModel):
     draft_id: str
@@ -32,7 +35,9 @@ class Comment(CommentBase):
     status: str
     submitted_at: datetime
     analysis: Optional[CommentAnalysis] = None
-    model_config = ConfigDict(from_attributes=True)
+    
+    class Config:
+        from_attributes = True
 
 class BulkCommentsIn(BaseModel):
     draft_id: str
