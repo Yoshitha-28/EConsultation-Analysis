@@ -78,7 +78,7 @@ docker-compose up --build
 ```
 ## Usage
 ### 1. Submit Comments for Analysis
-bash
+```bash
 curl -X POST "http://localhost:8000/api/v1/comments/bulk" \
      -H "Content-Type: application/json" \
      -d '{
@@ -98,8 +98,9 @@ json
     "comments_received": 3,
     "task_ids": ["task-uuid-1", "task-uuid-2", "task-uuid-3"]
 }
+```
 ### 2. Retrieve Comment with Analysis
-bash
+```bash
 curl "http://localhost:8000/api/v1/comments/1"
 Response:
 
@@ -123,110 +124,92 @@ json
         "analyzed_at": "2025-09-22T17:01:45.123456"
     }
 }
+```
 ### 3. Get Analysis Results Only
-bash
+```bash
 curl "http://localhost:8000/api/v1/comments/1/analysis"
-🔧 API Endpoints
-Method	Endpoint	Description
-POST	/api/v1/comments/bulk	Submit multiple comments for analysis
-GET	/api/v1/comments/{id}	Get comment with analysis results
-GET	/api/v1/comments/{id}/analysis	Get only analysis results
+```
 
+## API Endpoints
+---
+| Method	| Endpoint                       | Description                           |
+|---------|--------------------------------|---------------------------------------|
+| POST	| /api/v1/comments/bulk          | Submit multiple comments for analysis |
+| GET	| /api/v1/comments/{id}          | Get comment with analysis results     |
+| GET	| /api/v1/comments/{id}/analysis | Get only analysis results             |
+---
 ## ML Models Used
-Sentiment Analysis: distilbert-base-uncased-finetuned-sst-2-english
-
-Text Summarization: Custom extractive summarization
-
-Keyword Extraction: TF-IDF based keyword extraction
-
-WordCloud: Python wordcloud library
+1) Sentiment Analysis: distilbert-base-uncased-finetuned-sst-2-english
+2) Text Summarization: Custom extractive summarization
+3) Keyword Extraction: TF-IDF based keyword extraction
+4) WordCloud: Python wordcloud library
 
 ## Docker Services
 The application consists of 5 main services:
 
-api: FastAPI application (port 8000)
-
-worker: Celery worker for background processing
-
-postgres: PostgreSQL database (port 5432)
-
-redis: Message broker for Celery (port 6379)
-
-minio: Object storage for wordclouds (port 9000)
+1) api: FastAPI application (port 8000)
+2) worker: Celery worker for background processing
+3) postgres: PostgreSQL database (port 5432)
+4) redis: Message broker for Celery (port 6379)
+5) minio: Object storage for wordclouds (port 9000)
 
 ## Project Structure Details
-Core Components
-app/main.py: FastAPI application setup and routing
+### Core Components
+1) app/main.py: FastAPI application setup and routing
+2) app/models.py: Database models (Comment, CommentAnalysis)
+3) app/schemas.py: Pydantic schemas for request/response validation
+4) app/database.py: Database connection and session management
 
-app/models.py: Database models (Comment, CommentAnalysis)
+### Machine Learning Pipeline
+1) app/ml/sentiment.py: Sentiment analysis with DistilBERT
+2) app/ml/summarizer.py: Text summarization
+3) app/ml/keywords.py: Keyword extraction
+4) app/ml/wordcloud.py: WordCloud generation and storage
+5) app/ml/pipeline.py: Orchestrates the complete analysis pipeline
 
-app/schemas.py: Pydantic schemas for request/response validation
-
-app/database.py: Database connection and session management
-
-Machine Learning Pipeline
-app/ml/sentiment.py: Sentiment analysis with DistilBERT
-
-app/ml/summarizer.py: Text summarization
-
-app/ml/keywords.py: Keyword extraction
-
-app/ml/wordcloud.py: WordCloud generation and storage
-
-app/ml/pipeline.py: Orchestrates the complete analysis pipeline
-
-Background Processing
-app/workers/tasks.py: Celery tasks for async processing
-
-app/celery_app.py: Celery application configuration
+### Background Processing
+1) app/workers/tasks.py: Celery tasks for async processing
+2) app/celery_app.py: Celery application configuration
 
 ## Monitoring
 Check service status:
 
-bash
+```bash
 docker-compose ps
+```
 View API logs:
-
-bash
+```bash
 docker-compose logs api
+```
 View worker logs:
 
-bash
+```bash
 docker-compose logs worker
+```
 ## Troubleshooting
-Common Issues
-WordCloud bucket errors: Ensure MinIO is running and bucket exists
+### Common Issues
+1) WordCloud bucket errors: Ensure MinIO is running and bucket exists
+2) Database connection issues: Check PostgreSQL credentials in .env
+3) Celery task failures: Verify Redis connection and worker logs
 
-Database connection issues: Check PostgreSQL credentials in .env
-
-Celery task failures: Verify Redis connection and worker logs
-
-Health Checks
+### Health Checks
 API: http://localhost:8000/health
-
 MinIO: http://localhost:9000/minio/health/live
 
-🤝 Contributing
-Fork the repository
+## Contributing
+1) Fork the repository
+2) Create a feature branch
+3) Commit your changes
+4) Push to the branch
+5) Open a Pull Request
 
-Create a feature branch
-
-Commit your changes
-
-Push to the branch
-
-Open a Pull Request
-
-📄 License
+## License
 This project is licensed under the MIT License.
 
-🙏 Acknowledgments
-FastAPI for the excellent web framework
+## Acknowledgments
+1) FastAPI for the excellent web framework
+2) Hugging Face for pre-trained models
+3) Celery for background task processing
+4) SQLAlchemy for database ORM
 
-Hugging Face for pre-trained models
-
-Celery for background task processing
-
-SQLAlchemy for database ORM
-
-Note: This is a prototype system developed for the Smart India Hackathon. For production use, additional security measures, error handling, and scalability improvements would be needed.
+## Note: This is a prototype system developed for the Smart India Hackathon. For production use, additional security measures, error handling, and scalability improvements would be needed.
